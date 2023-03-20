@@ -39,6 +39,56 @@ changelog:
       - '^docs:'
       - '^test:'
 
+# .goreleaser.yaml
+brews:
+  -
+    # NOTE: make sure the url_template, the token and given repo (github or
+    # gitlab) owner and name are from the same kind.
+    # We will probably unify this in the next major version like it is
+    # done with scoop.
+
+    # GitHub/GitLab repository to push the formula to
+    tap:
+      # Repository owner template. (templateable)
+      owner: junyu-w
+
+      # Repository name. (templateable)
+      name: homebrew-gptc
+
+      # Optionally a branch can be provided. (templateable)
+      #
+      # Defaults to the default repository branch.
+      branch: master
+
+      # Optionally a token can be provided, if it differs from the token
+      # provided to GoReleaser
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+
+    # Git author used to commit to the repository.
+    # Defaults are shown.
+    commit_author:
+      name: goreleaserbot
+      email: bot@goreleaser.com
+
+    # The project name and current git tag are used in the format string.
+    commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
+
+    # Folder inside the repository to put the formula.
+    # Default is the root folder.
+    folder: Formula
+
+    # Your app's homepage.
+    # Default is empty.
+    homepage: "https://github.com/junyu-w/gptc"
+
+    # Template of your app's description.
+    # Default is empty.
+    description: "Supercharge your CLI with the power of OpenAI's GPT model (and other models too!)"
+
+    # SPDX identifier of your app's license.
+    # Default is empty.
+    license: "MIT"
+
 # The lines beneath this are called `modelines`. See `:help modeline`
 # Feel free to remove those if you don't want/use them.
 # yaml-language-server: $schema=https://goreleaser.com/static/schema.json
