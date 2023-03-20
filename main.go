@@ -15,31 +15,57 @@ import (
 	"github.com/spf13/viper"
 )
 
-// GPT-4 is in limited beta
-const model = openai.GPT3Dot5Turbo
+// NOTE: GPT-4 is in limited beta
+const defaultModel = openai.GPT3Dot5Turbo
+
+var model = defaultModel
 
 // coloring
 var prompt *color.Color
 var option *color.Color
 var gptResponse *color.Color
+var note *color.Color
+
+const configApiKey = "api_key"
+const configModel = "model"
 
 // a conversation struct to record previous conversations as context for future message
 var conversation []openai.ChatCompletionMessage
 
 func configureCommand(cmd *cobra.Command, args []string) {
-	// Get input from the user
+	note.Println("OpenAI API key can be generated on https://platform.openai.com/account/api-keys")
+	fmt.Println()
+
+	// Get input on api key
 	reader := bufio.NewReader(os.Stdin)
-	fmt.Print("Enter your OpenAI API key: ")
+	prompt.Print("Enter your OpenAI API key (press enter to use existing): ")
 	apiKey, _ := reader.ReadString('\n')
 	apiKey = strings.TrimSpace(apiKey)
+	if len(apiKey) == 0 {
+		apiKey = viper.GetString(configApiKey)
+		// if no existing api key found
+		if len(apiKey) == 0 {
+			fmt.Println("No existing API key found. Please generate one from https://platform.openai.com/account/api-keys")
+			os.Exit(1)
+		}
+	}
+	viper.Set(configApiKey, apiKey)
 
-	// Write the API key to the config file
-	viper.Set("api-key", apiKey)
+	// get input on model
+	prompt.Printf("What model would you like to use (default=\"%s\", press enter to use): ", defaultModel)
+	model, _ := reader.ReadString('\n')
+	model = strings.TrimSpace(model)
+	if len(model) == 0 {
+		model = defaultModel
+	}
+	viper.Set(configModel, model)
+
+	// Write to config file
 	if err := viper.WriteConfig(); err != nil {
 		fmt.Println("Error writing config file:", err)
 		os.Exit(1)
 	}
-	fmt.Println("API key saved to config file:", viper.ConfigFileUsed())
+	fmt.Println("Configuration saved to config file:", viper.ConfigFileUsed(), "👏")
 }
 
 func generateCommand(cmd *cobra.Command, args []string) {
@@ -115,7 +141,7 @@ func getClient() (*openai.Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	apiKey := viper.GetString("api-key")
+	apiKey := viper.GetString(configApiKey)
 
 	// Initialize the OpenAI API client with the API key
 	client := openai.NewClient(apiKey)
@@ -142,7 +168,6 @@ func outputStream(stream *openai.ChatCompletionStream) {
 }
 
 func generateScript(client *openai.Client, sentence string) (string, string, error) {
-	// Generate a command line script from the sentence using OpenAI's GPT-3 API
 	conversation = append(conversation, openai.ChatCompletionMessage{
 		Role:    openai.ChatMessageRoleUser,
 		Content: "Generate the bash script for sentence with no explanation. sentence: " + sentence + " =>",
@@ -179,7 +204,7 @@ func generateScript(client *openai.Client, sentence string) (string, string, err
 func explainScript(client *openai.Client, script string) error {
 	conversation = append(conversation, openai.ChatCompletionMessage{
 		Role:    openai.ChatMessageRoleUser,
-		Content: "Explain the command",
+		Content: "Explain the script",
 	})
 	doneChan := make(chan bool)
 	bar := getProgressBar()
@@ -213,7 +238,7 @@ func copyScript(script string) error {
 
 func chatWithAI(client *openai.Client) {
 	// Start a chat session with OpenAI's GPT-3 API
-	fmt.Println("Enter your message below or type 'quit' to exit the chat:")
+	note.Println("Enter your message below or type 'quit' to exit the chat:")
 	reader := bufio.NewReader(os.Stdin)
 	for {
 		prompt.Print("> ")
@@ -256,46 +281,71 @@ func chatWithAI(client *openai.Client) {
 }
 
 var rootCmd = &cobra.Command{
-	Use:   "gptc",
-	Short: "GPT-CLI: Supercharge your CLI with ChatGPT",
+	Use:     "gptc",
+	Short:   "GPT-CLI: Supercharge your CLI with ChatGPT",
+	Version: "1.0.0",
+	Run: func(cmd *cobra.Command, args []string) {
+		if !viper.IsSet(configApiKey) || viper.GetString(configApiKey) == "" {
+			note.Println("It appears that you don't have an API key configured yet, let's do that first 🙌")
+			configureCmd.Run(cmd, args)
+			fmt.Println()
+		}
+		generateCmd.Run(cmd, args)
+	},
 }
 
 var configureCmd = &cobra.Command{
-	Use:   "configure",
-	Short: "Configure the OpenAI API key",
-	Run:   configureCommand,
+	Use:     "configure",
+	Aliases: []string{"c"},
+	Short:   "Configure the OpenAI API key",
+	Run:     configureCommand,
 }
 
 var generateCmd = &cobra.Command{
-	Use:   "generate",
-	Short: "Generate script",
-	Run:   generateCommand,
+	Use:     "generate",
+	Aliases: []string{"g"},
+	Short:   "Generate script based on your description",
+	Run:     generateCommand,
 }
 
-func main() {
-	prompt = color.New(color.FgGreen, color.Bold)
-	option = color.New(color.FgYellow, color.Bold)
-	gptResponse = color.New(color.Italic)
-
-	// Initialize the CLI tool
-	if err := viper.BindPFlags(rootCmd.PersistentFlags()); err != nil {
-		fmt.Println("Error binding flags:", err)
-		os.Exit(1)
-	}
-	if err := viper.BindPFlags(generateCmd.Flags()); err != nil {
-		fmt.Println("Error binding flags:", err)
-		os.Exit(1)
-	}
-	rootCmd.AddCommand(configureCmd)
-	rootCmd.AddCommand(generateCmd)
-
+func initConfig() {
 	// set up config file
 	home, err := os.UserHomeDir()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	viper.SetConfigFile(fmt.Sprintf("%s/.gpt_cli.yaml", home))
+	configFilePath := fmt.Sprintf("%s/.gpt_cli.yaml", home)
+	viper.SetConfigFile(configFilePath)
+
+	_, err = os.OpenFile(configFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	// init config
+	if err = viper.ReadInConfig(); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	if !viper.IsSet(configModel) {
+		model = defaultModel
+	}
+}
+
+func main() {
+	prompt = color.New(color.FgGreen, color.Bold)
+	option = color.New(color.FgYellow, color.Bold)
+	gptResponse = color.New(color.Italic)
+	note = color.New(color.Bold)
+
+	// Initialize the CLI tool
+	rootCmd.AddCommand(configureCmd)
+	rootCmd.AddCommand(generateCmd)
+
+	initConfig()
 
 	// Execute the CLI tool
 	if err := rootCmd.Execute(); err != nil {
