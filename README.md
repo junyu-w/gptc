@@ -1,6 +1,6 @@
 # gptc - GPT ❤️ CLI
 
-Supercharge your CLI with the power of OpenAI's GPT model (and other models too!)
+Supercharge your CLI with the power of OpenAI's GPT model (and other models too!), generate script without leaving the terminal, one-click command explanation, and interactive chat with GPT all in one place.
 
 A large part of this tool is actually written by GPT-4 🧠
 
