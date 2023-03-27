@@ -34,6 +34,7 @@ var conversation []openai.ChatCompletionMessage
 
 func configureCommand(cmd *cobra.Command, args []string) {
 	note.Println("OpenAI API key can be generated on https://platform.openai.com/account/api-keys")
+	note.Println("List of models available to use can be found at https://platform.openai.com/docs/models")
 	fmt.Println()
 
 	// Get input on api key
@@ -69,8 +70,6 @@ func configureCommand(cmd *cobra.Command, args []string) {
 }
 
 func generateCommand(cmd *cobra.Command, args []string) {
-	conversation = make([]openai.ChatCompletionMessage, 0)
-
 	// Initialize the OpenAI API client with the API key from the config file
 	client, err := getClient()
 	if err != nil {
@@ -95,7 +94,6 @@ func generateCommand(cmd *cobra.Command, args []string) {
 	fmt.Println()
 
 	// Present the user with four options: execute, explain, edit, and chat
-	// TODO: make this look better
 	option.Print("[R] Run - ")
 	option.Print("[E] Explain - ")
 	option.Print("[C] Copy - ")
@@ -133,6 +131,16 @@ func generateCommand(cmd *cobra.Command, args []string) {
 		fmt.Println("Invalid choice")
 		os.Exit(1)
 	}
+}
+
+func chatCommand(cmd *cobra.Command, args []string) {
+	client, err := getClient()
+	if err != nil {
+		fmt.Println("Error initializing OpenAI API client:", err)
+		os.Exit(1)
+	}
+
+	chatWithAI(client)
 }
 
 func getClient() (*openai.Client, error) {
@@ -308,6 +316,12 @@ var generateCmd = &cobra.Command{
 	Run:     generateCommand,
 }
 
+var chatCmd = &cobra.Command{
+	Use:   "chat",
+	Short: "Chat with AI",
+	Run:   chatCommand,
+}
+
 func initConfig() {
 	// set up config file
 	home, err := os.UserHomeDir()
@@ -341,9 +355,13 @@ func main() {
 	gptResponse = color.New(color.Italic)
 	note = color.New(color.Bold)
 
+	// initialize the conversation context
+	conversation = make([]openai.ChatCompletionMessage, 0)
+
 	// Initialize the CLI tool
 	rootCmd.AddCommand(configureCmd)
 	rootCmd.AddCommand(generateCmd)
+	rootCmd.AddCommand(chatCmd)
 
 	initConfig()
 
