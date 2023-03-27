@@ -11,6 +11,10 @@ You can install this tool by downloading the release archive directly from GitHu
 brew tap junyu-w/gptc git@github.com:junyu-w/homebrew-gptc.git
 brew install gptc
 ```
+To upgrade to the latest version (make sure you had run the `brew tap` command above already), run
+```{bash}
+brew upgrade
+```
 
 ## How to use?
 
