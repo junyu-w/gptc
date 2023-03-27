@@ -14,12 +14,18 @@ brew install gptc
 
 ## How to use?
 
-It's as simple as typing `gptc` in your terminal, and we'll walk you through the rest
+It's as simple as typing `gptc` in your terminal, and we'll walk you through the rest from configuration to your first request 🙌
 
-### Generate and explain script
+Additionally, if you would like to just start an interactive chat with GPT about anything beyond just bash script or command, simply type 
+```
+gptc chat
+````
+and you'll have the ChatGPT experience right in the terminal!
+
+### Example - Generate and explain script
 
 https://user-images.githubusercontent.com/6601308/226514447-44020f03-867c-42d8-9dd5-f948b798cf83.mov
 
-### Interactive chat with GPT
+### Example - Interactive chat with GPT
 
 https://user-images.githubusercontent.com/6601308/226514460-2afd89fc-42e0-4ff5-825f-bb910babe687.mov
